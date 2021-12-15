@@ -1,0 +1,2 @@
+# amqpw
+wrap amqp
