@@ -9,7 +9,7 @@ import (
 
 func TestAmqp(t *testing.T) {
 
-	amqpw, err := New("amqp://guest:guest@localhost:5672", amqp.Config{})
+	//amqpw, err := New("amqp://guest:guest@localhost:5672", amqp.Config{})
 	if err != nil {
 		t.Error(err)
 		return
@@ -23,7 +23,7 @@ func TestAmqp(t *testing.T) {
 			t.Error(err)
 			continue
 		} else {
-			t.Log("amqp ok11")
+			t.Log("amqp ok")
 		}
 		ch, err := conn.Channel()
 		if err != nil {

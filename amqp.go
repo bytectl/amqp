@@ -71,6 +71,17 @@ func (amqpw *Amqpw) Close() error {
 // handleReconnect 等待notifyConnClose通知, 并尝试重连
 func (amqpw *Amqpw) handleReconnect(url string, c amqp.Config) {
 	for {
+		if !amqpw.isReady {
+			connection, err := amqp.DialConfig(url, c)
+			if err != nil {
+				fmt.Printf("Failed to reconnect: %v\n", err)
+				time.Sleep(reconnectDelay)
+				continue
+			}
+			amqpw.changeConnection(connection)
+			amqpw.isReady = true
+		}
+
 		select {
 		case <-amqpw.done:
 			// amqpw 退出
@@ -80,14 +91,7 @@ func (amqpw *Amqpw) handleReconnect(url string, c amqp.Config) {
 			fmt.Printf("Connection closed. Reconnecting...\n")
 			amqpw.isReady = false
 			amqpw.connection = nil
-			connection, err := amqp.DialConfig(url, c)
-			if err != nil {
-				fmt.Printf("Failed to reconnect: %v\n", err)
-				time.Sleep(reconnectDelay)
-				continue
-			}
-			amqpw.changeConnection(connection)
-			amqpw.isReady = true
+
 		}
 	}
 }
