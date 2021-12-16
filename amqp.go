@@ -105,3 +105,11 @@ func (amqpw *Amqpw) Conn() (*amqp.Connection, error) {
 	}
 	return nil, errNotConnected
 }
+
+// Channel get amqp channel
+func (amqpw *Amqpw) Channel() (*amqp.Channel, error) {
+	if amqpw.isReady {
+		return amqpw.connection.Channel()
+	}
+	return nil, errNotConnected
+}
