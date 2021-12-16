@@ -28,7 +28,7 @@ type Client struct {
 }
 
 // New create amqp connection
-func New(o *ClientOptions) *Client {
+func NewClient(o *ClientOptions) *Client {
 	client := &Client{
 		isReady:         false,
 		notifyConnClose: make(chan *amqp.Error),

@@ -22,7 +22,7 @@ func TestAmqp(t *testing.T) {
 	if url == "" {
 		url = "amqp://guest:guest@localhost:5672/"
 	}
-	amqpw := New(NewClientOptions().
+	amqpw := NewClient(NewClientOptions().
 		SetAddr(url).
 		SetOnConnect(onconnect).SetOnConnectionLost(onConnectionLost))
 
