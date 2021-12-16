@@ -19,8 +19,8 @@ var (
 	errAlreadyClosed = errors.New("already closed: not connected to the server")
 )
 
-// HandlerFunc amqp message handler function.
-type HandlerFunc func(ctx context.Context, delivery *amqp.Delivery)
+// ReconnectCallFunc 重连回调
+type ReconnectCallFunc func(ctx context.Context, conn *amqp.Connection)
 
 // Amqp
 type Amqpw struct {
@@ -31,19 +31,13 @@ type Amqpw struct {
 }
 
 // New create amqp connection
-func New(url string, c amqp.Config) (*Amqpw, error) {
-	connection, err := amqp.DialConfig(url, c)
-	if err != nil {
-		return nil, err
-	}
+func New(url string, c amqp.Config, callback ReconnectCallFunc) (*Amqpw, error) {
 	amqpw := &Amqpw{
-		isReady:         true,
+		isReady:         false,
 		notifyConnClose: make(chan *amqp.Error),
 		done:            make(chan bool),
 	}
-
-	amqpw.changeConnection(connection)
-	go amqpw.handleReconnect(url, c)
+	go amqpw.handleReconnect(url, c, callback)
 	return amqpw, nil
 }
 
@@ -69,7 +63,8 @@ func (amqpw *Amqpw) Close() error {
 }
 
 // handleReconnect 等待notifyConnClose通知, 并尝试重连
-func (amqpw *Amqpw) handleReconnect(url string, c amqp.Config) {
+func (amqpw *Amqpw) handleReconnect(url string, c amqp.Config, callback ReconnectCallFunc) {
+	cancelfunc := func() {}
 	for {
 		if !amqpw.isReady {
 			connection, err := amqp.DialConfig(url, c)
@@ -80,19 +75,26 @@ func (amqpw *Amqpw) handleReconnect(url string, c amqp.Config) {
 			}
 			amqpw.changeConnection(connection)
 			amqpw.isReady = true
+			if callback != nil {
+				ctx, cancel := context.WithCancel(context.Background())
+				cancelfunc = cancel
+				callback(ctx, amqpw.connection)
+			}
 		}
 
 		select {
 		case <-amqpw.done:
 			// amqpw 退出
+			cancelfunc()
 			return
 		case <-amqpw.notifyConnClose:
 			// 连接出错
 			fmt.Printf("Connection closed. Reconnecting...\n")
 			amqpw.isReady = false
 			amqpw.connection = nil
-
+			cancelfunc()
 		}
+
 	}
 }
 

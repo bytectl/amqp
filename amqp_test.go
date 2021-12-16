@@ -1,15 +1,35 @@
 package amqp
 
 import (
+	"fmt"
+	"os"
 	"testing"
 	"time"
+
+	"context"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func TestAmqp(t *testing.T) {
+func reconnectCallback(ctx context.Context, conn *amqp.Connection) {
+	fmt.Printf("reconnect callback\n")
+	go func() {
+		select {
+		case <-ctx.Done():
+			fmt.Printf("reconnect callback done\n")
+			return
+		case <-time.After(100 * time.Second):
+			fmt.Printf("reconnect callback timeout\n")
+		}
+	}()
+}
 
-	amqpw, err := New("amqp://guest:guest@localhost:5672", amqp.Config{})
+func TestAmqp(t *testing.T) {
+	url := os.Getenv("AMQP_URL")
+	if url == "" {
+		url = "amqp://guest:guest@localhost:5672/"
+	}
+	amqpw, err := New(url, amqp.Config{}, reconnectCallback)
 	if err != nil {
 		t.Error(err)
 		return
