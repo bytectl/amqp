@@ -6,22 +6,15 @@ import (
 	"testing"
 	"time"
 
-	"context"
-
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func reconnectCallback(ctx context.Context, conn *amqp.Connection) {
-	fmt.Printf("reconnect callback\n")
-	go func() {
-		select {
-		case <-ctx.Done():
-			fmt.Printf("reconnect callback done\n")
-			return
-		case <-time.After(100 * time.Second):
-			fmt.Printf("reconnect callback timeout\n")
-		}
-	}()
+func onconnect(conn *amqp.Connection) {
+	fmt.Printf("connect callback\n")
+}
+
+func onConnectionLost(conn *amqp.Connection, err *amqp.Error) {
+	fmt.Printf("connection lost callback\n")
 }
 
 func TestAmqp(t *testing.T) {
@@ -29,15 +22,14 @@ func TestAmqp(t *testing.T) {
 	if url == "" {
 		url = "amqp://guest:guest@localhost:5672/"
 	}
-	amqpw, err := New(url, amqp.Config{}, reconnectCallback)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	amqpw := New(NewClientOptions().
+		SetAddr(url).
+		SetOnConnect(onconnect).SetOnConnectionLost(onConnectionLost))
+
 	defer amqpw.Close()
 	count := 0
 	for {
-		time.Sleep(1 * time.Second)
+		time.Sleep(3 * time.Second)
 		conn, err := amqpw.Conn()
 		if err != nil {
 			t.Error(err)
